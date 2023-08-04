@@ -1,4 +1,8 @@
 ﻿@page "/"
+@using SpotifyHistory.Data
+@using SpotifyHistory.Helpers
+@using Microsoft.AspNetCore.Http;
+@inject NavigationManager NavManager
 
 <PageTitle>Index</PageTitle>
 
@@ -6,5 +10,14 @@
 
 Welcome to your new app.
 
+<button type="button" class="btn btn-primary" @onclick="GoToURL">Login</button>
+
 <SurveyPrompt Title="How is Blazor working for you?" />
 
+@code {
+
+    private void GoToURL()
+    {
+        NavManager.NavigateTo(SpotifyAuth.authorizationLinkBuilder(), true);
+    }
+}

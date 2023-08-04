@@ -1,19 +1,115 @@
 ﻿@page "/counter"
+@using SpotifyHistory.Data
+@using SpotifyHistory.Helpers
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject NavigationManager NavManager
 
-<PageTitle>Counter</PageTitle>
+<PageTitle>Songs</PageTitle>
 
-<h1>Counter</h1>
+<h1>Testing</h1>
 
-<p role="status">Current count: @currentCount</p>
+<p>@authCode</p>
+<p>@value</p>
+<p>@history</p>
 
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+<button class="btn btn-primary" @onclick="GetHistory">Click me</button>
+<button class="btn btn-primary" @onclick="GetToken">Click me next</button>
+<button class="btn btn-primary" @onclick="UpdateHistory">Update</button>
 
 @code {
-    private int currentCount = 0;
+    string? authCode = "";
+    string access = "";
+    string? value;
+    string refresh = "";
+    string? Auth = "false";
+    string? history = "";
 
-    private void IncrementCount()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        currentCount++;
+        await GetAuth();
+        if (Auth != "true")
+        {
+            authCode = NavManager.QueryString("code");
+            if (authCode == null || authCode == "")
+            {
+                NavManager.NavigateTo("/", true);
+            }
+            else
+            {
+                await localStorage.SetItemAsync("AuthCode", authCode);
+                SpotifyAuth.getTokens(authCode);
+                await SetToken();
+            }
+        }
     }
+
+    private async Task refreshEverything()
+    {
+        authCode = await localStorage.GetItemAsync<string>("AuthCode");
+        if (authCode != "")
+        {
+            SpotifyAuth.getTokens(authCode);
+            await SetToken();
+        }
+    }
+
+    public async void GetHistory()
+    {
+        await GetAuth();
+        if (Auth == "true")
+        {
+            access = await localStorage.GetItemAsync<string>("accessToken");
+            var prevDateTime = await localStorage.GetItemAsync<string>("DateTime");
+            var actualTime = DateTime.Parse(prevDateTime);
+            var addedTime = actualTime.AddMinutes(60);
+            if (DateTime.Compare(addedTime, DateTime.Now) < 0)
+            {
+                //call refresh token and then set token with new token
+                refresh = await localStorage.GetItemAsync<string>("refreshToken");
+                if (refresh == "Default")
+                {
+                    await refreshEverything();
+                }
+                else
+                {
+                    await SpotifyAuth.SpotifyRefreshAsync(refresh);
+                    await SetToken();
+                }
+            }
+            await History.GetHistoryAsync(access);
+        }
+    }
+
+    private async Task SetToken()
+    {
+        await Task.Delay(1000);
+        access = SpotifyAuth.getAccessToken();
+        refresh = SpotifyAuth.getRefreshToken();
+        await localStorage.SetItemAsync("accessToken", access);
+        await localStorage.SetItemAsync("refreshToken", refresh);
+        await localStorage.SetItemAsync("DateTime", DateTime.Now.ToString());
+        await Authenticated();
+    }
+
+    private async Task Authenticated()
+    {
+        await localStorage.SetItemAsync("Auth", "true");
+    }
+
+    private async Task GetAuth()
+    {
+        Auth = await localStorage.GetItemAsync<string>("Auth");
+    }
+
+    public async Task GetToken()
+    {
+        value = await localStorage.GetItemAsync<string>("accessToken");
+    }
+
+    public void UpdateHistory()
+    {
+        history = History.GetSongHistory();
+    }
+
 }
 
