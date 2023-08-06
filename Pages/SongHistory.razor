@@ -1,4 +1,4 @@
-﻿@page "/counter"
+﻿@page "/history"
 @using SpotifyHistory.Data
 @using SpotifyHistory.Helpers
 @inject Blazored.LocalStorage.ILocalStorageService localStorage
@@ -11,9 +11,9 @@
 <p>@authCode</p>
 <p>@value</p>
 <p>@history</p>
+<p>@e</p>
 
 <button class="btn btn-primary" @onclick="GetHistory">Click me</button>
-<button class="btn btn-primary" @onclick="GetToken">Click me next</button>
 <button class="btn btn-primary" @onclick="UpdateHistory">Update</button>
 
 @code {
@@ -23,6 +23,7 @@
     string refresh = "";
     string? Auth = "false";
     string? history = "";
+    string e = "";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -36,8 +37,10 @@
             }
             else
             {
-                await localStorage.SetItemAsync("AuthCode", authCode);
                 SpotifyAuth.getTokens(authCode);
+                await localStorage.SetItemAsync("AuthCode", authCode);
+                e = SpotifyAuth.getError();
+                await Authenticated();
                 await SetToken();
             }
         }
@@ -55,6 +58,10 @@
 
     public async void GetHistory()
     {
+        if (access == "")
+        {
+            await Task.Delay(1000);
+        }
         await GetAuth();
         if (Auth == "true")
         {
@@ -88,7 +95,6 @@
         await localStorage.SetItemAsync("accessToken", access);
         await localStorage.SetItemAsync("refreshToken", refresh);
         await localStorage.SetItemAsync("DateTime", DateTime.Now.ToString());
-        await Authenticated();
     }
 
     private async Task Authenticated()
@@ -99,11 +105,6 @@
     private async Task GetAuth()
     {
         Auth = await localStorage.GetItemAsync<string>("Auth");
-    }
-
-    public async Task GetToken()
-    {
-        value = await localStorage.GetItemAsync<string>("accessToken");
     }
 
     public void UpdateHistory()
