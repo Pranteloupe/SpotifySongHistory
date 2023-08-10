@@ -9,8 +9,8 @@ namespace SpotifyHistory.Data {
         public static string apiLink = "https://accounts.spotify.com/api/token";
         private static string client_id = "3043fbd8bee54c6a8ac2a6fafd256418";
         private static string client_secret = "9d963c9982b74173b6b07f55b68fc91e";
-        //private static string redirect = "https://spotifyhistory.azurewebsites.net/history"; //when testing make this a comment
-        private static string redirect = "http://127.0.0.1:5157/history";
+        private static string redirect = "https://spotifyhistory.azurewebsites.net/history"; //when testing make this a comment
+        //private static string redirect = "http://127.0.0.1:5157/history";
         private static string _accessToken = "";
         private static string _refreshToken = "";
         private static HttpClient client = new HttpClient();
@@ -38,6 +38,9 @@ namespace SpotifyHistory.Data {
                 AccessToken? access = JsonConvert.DeserializeObject<AccessToken>(jsonResponse);
                 _accessToken = access?.access_token != null ? access.access_token : "Default";
                 _refreshToken = access?.refresh_token != null ? access.refresh_token : "Default";
+
+                History history = new History();
+                await history.setUsername(_accessToken);
             }
             else {
                 var jsonResponse = await response.Content.ReadAsStringAsync();
@@ -66,6 +69,9 @@ namespace SpotifyHistory.Data {
                 AccessToken? access = JsonConvert.DeserializeObject<AccessToken>(jsonResponse);
                 _accessToken = access?.access_token != null ? access.access_token : "Default";
                 _refreshToken = access?.refresh_token != null ? access.refresh_token : "Default";
+
+                History history = new History();
+                await history.setUsername(_accessToken);
             }
             else {
                response.EnsureSuccessStatusCode();

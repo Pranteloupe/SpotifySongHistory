@@ -20,7 +20,7 @@ namespace SpotifyHistory.Data {
 
         public class PlayHistory {
             public Track? track { get; set; }
-            public string? played_at { get; set; }
+            public DateTime played_at { get; set; }
             public Context? context { get; set; }
         }
 
