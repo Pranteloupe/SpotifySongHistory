@@ -4,6 +4,8 @@ using MongoDB.Driver;
 using SpotifySongHistory.Data;
 using System.Security.Authentication;
 using MongoDB.Bson;
+using System.Text.Json;
+using MongoDB.Bson.Serialization;
 
 namespace SpotifyHistory.Data {
     public class History {
@@ -14,6 +16,7 @@ namespace SpotifyHistory.Data {
         private MongoClientSettings settings;
         private MongoClient mongoClient;
         private string username = "";
+        private double _lastsync = 0;
         private string displayName = "";
 
         public History() {
@@ -22,36 +25,72 @@ namespace SpotifyHistory.Data {
             mongoClient = new MongoClient(settings);
         }
 
-        //This is the sync method. It gets all the previously listened to tracks, tranforms them into songs, and then adds it to the database
-        public async Task GetHistoryAsync(string access) {
-            var request = new HttpRequestMessage(HttpMethod.Get, apiLink + "/player/recently-played");
+        //runs automatically when songhistory.razor is opened
+        public async Task GetHistoryAsync(string access, string refresh) {
             h = "";
+
+            //await setUsername(access);
 
             if (httpClient.DefaultRequestHeaders.Contains("Authorization")) {
                 httpClient.DefaultRequestHeaders.Remove("Authorization");
             }
             httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + access);
 
+            List<Song> songs = new List<Song>();
+
+            apiLink += "/player/recently-played?limit=50";
+            var request = new HttpRequestMessage(HttpMethod.Get, apiLink);
             var response = await httpClient.SendAsync(request);
             var jsonResponse = await response.Content.ReadAsStringAsync();
-
             RecentlyPlayed? recentlyPlayed = JsonConvert.DeserializeObject<RecentlyPlayed>(jsonResponse);
-            //Transforming all songs
-            List<Song> songs = new List<Song>();
-            for (int i = 0; i < 15; i++) {
-                h += recentlyPlayed?.items?[i].track?.name + " - " + recentlyPlayed?.items?[i].track?.artists?.First<Artist>().name + recentlyPlayed?.items?[i].played_at + "\n";
+
+            var count = recentlyPlayed?.items?.Count != null ? recentlyPlayed.items.Count : 0;
+
+            for (int i = count - 1; i >= 0; i--) {
+                h += recentlyPlayed?.items?[i].track?.name + " - " + recentlyPlayed?.items?[i].track?.artists?.First<Artist>().name + recentlyPlayed?.items?[i].played_at + recentlyPlayed?.items?[i].track?.album?.genres + "\n";
+                //Console.WriteLine(recentlyPlayed?.items?[i].track?.name);
                 songs.Add(SongToDocument(recentlyPlayed?.items?[i]));
             }
-            //Serialize songs into a list of songs
-            Document d = new Document();
-            d.username = "testing3";
-            d.lastsync = DateTime.Now;
-            d.songs = songs;
-            string json = JsonConvert.SerializeObject(d, Formatting.Indented);
-            
-            //Check if username exists in database, but for now just add stuff
-            BsonDocument document = MongoDB.Bson.Serialization.BsonSerializer.Deserialize<BsonDocument>(json);
-            await mongoClient.GetDatabase("SpotifySongHistory").GetCollection<BsonDocument>("SpotifySongs").InsertOneAsync(document);
+
+            var findDocument = mongoClient.GetDatabase("SpotifySongHistory").GetCollection<Document>("SpotifySongs").Find(a => a.username == username).SingleOrDefault() != null
+                ? mongoClient.GetDatabase("SpotifySongHistory").GetCollection<Document>("SpotifySongs").Find(a => a.username == username).ToList() : null;
+
+            if (findDocument == null) {
+                Document document = new Document();
+                document.username = username;
+                document.access_token = access;
+                document.refresh_token = refresh;
+                document.time = DateTime.UtcNow.Subtract(DateTime.UnixEpoch).TotalMilliseconds;
+                document.page = 0;
+                document.type = "recently-played";
+                document.songs = songs;
+
+                string json = JsonConvert.SerializeObject(document, Formatting.Indented);
+
+                BsonDocument bsonDocument = MongoDB.Bson.Serialization.BsonSerializer.Deserialize<BsonDocument>(json);
+                var dotnetObj = BsonTypeMapper.MapToDotNetValue(bsonDocument);
+                string json2 = JsonConvert.SerializeObject(dotnetObj);
+                await mongoClient.GetDatabase("SpotifySongHistory").GetCollection<BsonDocument>("SpotifySongs").InsertOneAsync(bsonDocument);
+            } else {
+                var mydoc = findDocument.First();
+                var currentSongs = mydoc.songs;
+
+                var filter = Builders<Document>.Filter.Eq(x => x.username, username);
+                var refreshSongDefinition = Builders<Document>.Update.Set(t => t.refresh_token, refresh);
+
+                double? timeOfLast = currentSongs?.Last().played_at;
+                if (timeOfLast != songs.Last().played_at) {
+                    for (int i = 0; i < songs.Count; i++) {
+                        if (timeOfLast < songs[i].played_at) {
+                            for (int j = i; j < songs.Count; j++) {
+                                var pushSongDefinition = Builders<Document>.Update.Push(t => t.songs, songs[j]);
+                                var addNewSongResult = await mongoClient.GetDatabase("SpotifySongHistory").GetCollection<Document>("SpotifySongs").UpdateOneAsync(filter, pushSongDefinition);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
         public async Task setUsername(string access) {
@@ -89,7 +128,10 @@ namespace SpotifyHistory.Data {
                     }
                 }
             }
-            song.played_at = playHistory?.played_at != null ? playHistory.played_at : DateTime.MinValue;
+            if (playHistory?.track?.album?.genres != null) {
+                song.genres.Concat<string>(playHistory.track.album.genres);
+            }
+            song.played_at = playHistory?.played_at != null ? playHistory.played_at.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalMilliseconds: 0;
             song.length = playHistory?.track?.duration_ms != null ? playHistory.track.duration_ms / 1000 : 0;
             song.genres = playHistory?.track?.artists?.First().genres;
 
