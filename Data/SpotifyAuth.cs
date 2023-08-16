@@ -9,8 +9,8 @@ namespace SpotifyHistory.Data {
         public static string apiLink = "https://accounts.spotify.com/api/token";
         private static string client_id = "3043fbd8bee54c6a8ac2a6fafd256418";
         private static string client_secret = "9d963c9982b74173b6b07f55b68fc91e";
-        //private static string redirect = "https://spotifyhistory.azurewebsites.net/history"; //when testing make this a comment
-        private static string redirect = "http://127.0.0.1:5157/history";
+        private static string redirect = "https://spotifyhistory.azurewebsites.net/history"; //when testing make this a comment
+        //private static string redirect = "http://127.0.0.1:5157/history";
         private static string _accessToken = "";
         private static string _refreshToken = "";
         private static HttpClient client = new HttpClient();

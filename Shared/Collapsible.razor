@@ -1,0 +1,40 @@
+﻿@if (id == 2)
+{
+    <div class="panel-heading" role="tab" id="headingOne">
+        <a class="panel-title accordion-toggle" role="button" data-toggle="collapse" @onclick="@Toggle" aria-expanded="true" aria-controls="collapseOne">
+            Date/Time
+        </a><!-- /.panel-title -->
+    </div>
+}
+else if (id == 1)
+{
+    <div class="panel-heading">
+        <a class="panel-title accordion-toggle visible-sm-block" role="button" data-toggle="collapse" @onclick="@Toggle" aria-expanded="false" aria-controls="collapseFilters">
+            Filter
+        </a>
+        <div class="panel-body">
+            <button class="btn btn-default" type="submit">Apply Filters</button>
+            <a class="btn btn-sm btn-link pull-right visible-sm-inline" data-target="#">Clear Selections</a>
+            <a class="btn btn-sm btn-link pull-right hidden-sm" data-target="#">Reset</a>
+        </div>
+    </div>
+}
+
+@if (!Collapsed)
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+    [Parameter]
+    public bool Collapsed { get; set; }
+    [Parameter]
+    public int id { get; set; }
+
+    void Toggle()
+    {
+        Collapsed = !Collapsed;
+    }
+}

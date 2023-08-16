@@ -1,29 +1,93 @@
 ﻿@page "/history"
 @using SpotifyHistory.Data
 @using SpotifyHistory.Helpers
+@using SpotifySongHistory.Data
+@using Radzen.Blazor
+@using Radzen
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @inject Blazored.LocalStorage.ILocalStorageService localStorage
 @inject ProtectedSessionStorage BrowserStorage
 @inject NavigationManager NavManager
 
 <PageTitle>Songs</PageTitle>
+<body style="background-color: #191414;">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" Wrap="FlexWrap.Wrap">
+        <RadzenTextBox Placeholder="Track, Artist, Album ... " @bind-Value=@search class="w-100" Style="max-width: 50%;" />
+        <RadzenButton Icon="search" @onclick="getSearchQuery" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined" />
+        <button @onclick="getSearchQuery">Click me!</button>
 
-<p>@authCode</p>
-<p>@value</p>
-<p>@history</p>
-<p>@e</p>
+        <RadzenAccordion Multiple="true" Style="max-width: 50%; min-width: 30%;">
+            <Items>
+                <RadzenAccordionItem Text="Filters" Icon="account_box">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="20px">
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="4px">
+                            Date and Time
+                            <RadzenDatePicker @bind-Value=@date />
+                        </RadzenStack>
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="4px">
+                            Length
+                            <RadzenSlider Range="true" @bind-Value=@ranger TValueList="List<int>" />
+                        </RadzenStack>
+                    </RadzenStack>
+                </RadzenAccordionItem>
+            </Items>
+        </RadzenAccordion>
+    </RadzenStack>
 
-<button class="btn btn-primary" @onclick="UpdateHistory">Update</button>
+    <RadzenDataList AllowVirtualization="true" Style="height: 1000px; overflow: auto;" Data="@listOfSongs" TItem="Song">
+        <Template Context="song">
+            <RadzenCard Style="width: 100%; padding: 0;">
+                <RadzenRow Gap="0">
+                    <RadzenColumn Size="12" SizeLG="3" Class="rz-p-4 product-title">
+                        <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="rz-color-secondary">@(song.track)</RadzenText>
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeLG="3" Class="rz-p-4 product-title">
+                        <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="rz-color-secondary">@(song.artists.First())</RadzenText>
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeLG="7" Class="rz-p-4">
+                        <RadzenRow Gap="0">
+                            <RadzenColumn Size="12" SizeMD="6" SizeLG="2">
+                                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" Class="rz-mb-0">Length</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2">@(convertToTime(song.length))</RadzenText>
+                            </RadzenColumn>
+                            <RadzenColumn Size="12" SizeMD="6" SizeLG="2">
+                                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" Class="rz-mb-0">Popularity</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2">@(song.popularity)</RadzenText>
+                            </RadzenColumn>
+                            <RadzenColumn Size="12" SizeMD="6" SizeLG="5">
+                                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" Class="rz-mb-0">Date</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2">@(convertToDate(song.played_at))</RadzenText>
+                            </RadzenColumn>
+                        </RadzenRow>
+                    </RadzenColumn>
+                </RadzenRow>
+            </RadzenCard>
+        </Template>
+    </RadzenDataList>
+
+    <button class="btn btn-primary" @onclick="@UpdateHistory">Update</button>
+    <p style="color: white;">@search</p>
+    <p style="color: white;">@results</p>
+</body>
 
 @code {
+    string? search;
+    string results = "";
+    IEnumerable<int> ranger = new int[] { 30, 78 };
+    DateTime? date;
+    string username = "";
     string? authCode = "";
     string? access = "";
-    string? value;
     string? refresh = "";
     string? Auth = "false";
     string? history = "";
     string e = "";
+
+    Filter filter = new Filter();
+
+    List<Song> listOfSongs;
     History songHistory = new History();
+    Searching searching = new Searching();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -85,8 +149,28 @@
 
     public void UpdateHistory()
     {
-        history = songHistory.GetSongHistory();
+        search = results;
+        // history = songHistory.GetSongHistory();
     }
 
+    private void getSearchQuery()
+    {
+        Console.WriteLine("called");
+        //results = searching.Search(search, songHistory.getUsername());
+        listOfSongs = searching.Search(search, songHistory.getUsername());
+        Console.WriteLine("after");
+    }
+
+    private string convertToTime(int time)
+    {
+        return "" + time / 60 + "m " + time % 60 + "s"; 
+    }
+
+    private string convertToDate(double date)
+    {
+        TimeSpan timeSpan = TimeSpan.FromMilliseconds(date);
+        DateTime dateTime = new DateTime(1970, 1, 1) + timeSpan;
+        return dateTime.ToLocalTime().ToShortDateString() + " " + dateTime.ToLocalTime().ToShortTimeString();
+    }
 }
 

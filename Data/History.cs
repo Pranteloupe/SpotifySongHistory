@@ -6,6 +6,8 @@ using System.Security.Authentication;
 using MongoDB.Bson;
 using System.Text.Json;
 using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Options;
+using MongoDB.Bson.Serialization.Serializers;
 
 namespace SpotifyHistory.Data {
     public class History {
@@ -16,8 +18,8 @@ namespace SpotifyHistory.Data {
         private MongoClientSettings settings;
         private MongoClient mongoClient;
         private string username = "";
-        private double _lastsync = 0;
         private string displayName = "";
+        private string result = "";
 
         public History() {
             settings = MongoClientSettings.FromUrl(new MongoUrl(connectionString));
@@ -45,13 +47,49 @@ namespace SpotifyHistory.Data {
             RecentlyPlayed? recentlyPlayed = JsonConvert.DeserializeObject<RecentlyPlayed>(jsonResponse);
 
             var count = recentlyPlayed?.items?.Count != null ? recentlyPlayed.items.Count : 0;
+            string ids = "";
+
+            BsonSerializer.RegisterSerializer(
+                typeof(decimal),
+                new DecimalSerializer(BsonType.Double,
+                new RepresentationConverter(
+                    true, // allow overflow, return decimal.MinValue or decimal.MaxValue instead
+                    true //allow truncation
+                ))
+            );
 
             for (int i = count - 1; i >= 0; i--) {
                 h += recentlyPlayed?.items?[i].track?.name + " - " + recentlyPlayed?.items?[i].track?.artists?.First<Artist>().name + recentlyPlayed?.items?[i].played_at + recentlyPlayed?.items?[i].track?.album?.genres + "\n";
                 //Console.WriteLine(recentlyPlayed?.items?[i].track?.name);
                 songs.Add(SongToDocument(recentlyPlayed?.items?[i]));
+                ids += recentlyPlayed?.items?[i].track?.id + ",";
             }
 
+            string audioLink = "https://api.spotify.com/v1/audio-features";
+            audioLink += "?ids=" + ids.Substring(0, ids.Length - 1);
+            var audioRequest = new HttpRequestMessage(HttpMethod.Get, audioLink);
+            var audioResponse = await httpClient.SendAsync(audioRequest);
+            var audioJson = await audioResponse.Content.ReadAsStringAsync();
+            AudioFeatures? audioFeatures = JsonConvert.DeserializeObject<AudioFeatures>(audioJson);
+
+            for (int i = 0; i < songs.Count; i++) {
+                if (audioFeatures?.audio_features?[i] != null) {
+                    songs[i].acousticness = audioFeatures.audio_features[i].acousticness;
+                    songs[i].analysis_url = audioFeatures.audio_features[i].analysis_url;
+                    songs[i].danceability = audioFeatures.audio_features[i].danceability;
+                    songs[i].energy = audioFeatures.audio_features[i].energy;
+                    songs[i].instrumentalness = audioFeatures.audio_features[i].instrumentalness;
+                    songs[i].key = audioFeatures.audio_features[i].key;
+                    songs[i].liveness = audioFeatures.audio_features[i].liveness;
+                    songs[i].loudness = audioFeatures.audio_features[i].loudness;
+                    songs[i].mode = audioFeatures.audio_features[i].mode;
+                    songs[i].speechiness = audioFeatures.audio_features[i].speechiness;
+                    songs[i].tempo = audioFeatures.audio_features[i].tempo;
+                    songs[i].time_signature = audioFeatures.audio_features[i].time_signature;
+                    songs[i].valence = audioFeatures.audio_features[i].valence;
+                }
+            }
+           
             var findDocument = mongoClient.GetDatabase("SpotifySongHistory").GetCollection<Document>("SpotifySongs").Find(a => a.username == username).SingleOrDefault() != null
                 ? mongoClient.GetDatabase("SpotifySongHistory").GetCollection<Document>("SpotifySongs").Find(a => a.username == username).ToList() : null;
 
@@ -131,10 +169,10 @@ namespace SpotifyHistory.Data {
             if (playHistory?.track?.album?.genres != null) {
                 song.genres.Concat<string>(playHistory.track.album.genres);
             }
+            song.song_id = playHistory?.track?.id;
             song.played_at = playHistory?.played_at != null ? playHistory.played_at.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalMilliseconds: 0;
             song.length = playHistory?.track?.duration_ms != null ? playHistory.track.duration_ms / 1000 : 0;
             song.genres = playHistory?.track?.artists?.First().genres;
-
             song.popularity = playHistory?.track?.popularity != null ? playHistory.track.popularity : 0;
             song.track_link = playHistory?.track?.external_urls?.spotify;
             song.album_link = playHistory?.track?.album?.external_urls?.spotify;
@@ -160,4 +198,5 @@ namespace SpotifyHistory.Data {
         }
     }
 }
+
 
