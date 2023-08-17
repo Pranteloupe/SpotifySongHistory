@@ -5,10 +5,11 @@
 @inject NavigationManager NavManager
 
 <PageTitle>Index</PageTitle>
-
-<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center">
-    <button type="button" class="btn btn-outline-light btn-lg" @onclick="GoToURL">Login</button>
-</RadzenStack>
+<div class="content px-4">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center">
+        <button type="button" class="btn btn-outline-dark btn-lg" @onclick="GoToURL">Login</button>
+    </RadzenStack>
+</div>
 
 @code {
 

@@ -10,71 +10,101 @@
 @inject NavigationManager NavManager
 
 <PageTitle>Songs</PageTitle>
-<body style="background-color: #191414;">
-    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" Wrap="FlexWrap.Wrap">
-        <RadzenTextBox Placeholder="Track, Artist, Album ... " @bind-Value=@search class="w-100" Style="max-width: 50%;" />
-        <RadzenButton Icon="search" @onclick="getSearchQuery" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined" />
-        <button @onclick="getSearchQuery">Click me!</button>
 
-        <RadzenAccordion Multiple="true" Style="max-width: 50%; min-width: 30%;">
-            <Items>
-                <RadzenAccordionItem Text="Filters" Icon="account_box">
-                    <RadzenStack Orientation="Orientation.Vertical" Gap="20px">
-                        <RadzenStack Orientation="Orientation.Vertical" Gap="4px">
-                            Date and Time
-                            <RadzenDatePicker @bind-Value=@date />
-                        </RadzenStack>
-                        <RadzenStack Orientation="Orientation.Vertical" Gap="4px">
-                            Length
-                            <RadzenSlider Range="true" @bind-Value=@ranger TValueList="List<int>" />
-                        </RadzenStack>
-                    </RadzenStack>
-                </RadzenAccordionItem>
-            </Items>
-        </RadzenAccordion>
-    </RadzenStack>
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
 
-    <RadzenDataList AllowVirtualization="true" Style="height: 1000px; overflow: auto;" Data="@listOfSongs" TItem="Song">
-        <Template Context="song">
-            <RadzenCard Style="width: 100%; padding: 0;">
-                <RadzenRow Gap="0">
-                    <RadzenColumn Size="12" SizeLG="3" Class="rz-p-4 product-title">
-                        <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="rz-color-secondary">@(song.track)</RadzenText>
-                    </RadzenColumn>
-                    <RadzenColumn Size="12" SizeLG="3" Class="rz-p-4 product-title">
-                        <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="rz-color-secondary">@(song.artists.First())</RadzenText>
-                    </RadzenColumn>
-                    <RadzenColumn Size="12" SizeLG="7" Class="rz-p-4">
-                        <RadzenRow Gap="0">
-                            <RadzenColumn Size="12" SizeMD="6" SizeLG="2">
-                                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" Class="rz-mb-0">Length</RadzenText>
-                                <RadzenText TextStyle="TextStyle.Body2">@(convertToTime(song.length))</RadzenText>
-                            </RadzenColumn>
-                            <RadzenColumn Size="12" SizeMD="6" SizeLG="2">
-                                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" Class="rz-mb-0">Popularity</RadzenText>
-                                <RadzenText TextStyle="TextStyle.Body2">@(song.popularity)</RadzenText>
-                            </RadzenColumn>
-                            <RadzenColumn Size="12" SizeMD="6" SizeLG="5">
-                                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" Class="rz-mb-0">Date</RadzenText>
-                                <RadzenText TextStyle="TextStyle.Body2">@(convertToDate(song.played_at))</RadzenText>
-                            </RadzenColumn>
-                        </RadzenRow>
-                    </RadzenColumn>
-                </RadzenRow>
-            </RadzenCard>
-        </Template>
-    </RadzenDataList>
+    <main>
+        <div class="top-row px-4">
+            <RadzenText style="flex-grow: 1; justify-content: center; text-align: center; color: #1db954; align-content: center" TextAlign="TextAlign.Center" TextStyle="TextStyle.DisplayH6">Song History</RadzenText>
+            <button @onclick="Logout" style="align-content: end; border-color: #ffffff; color: #1db954" class="btn btn-outline-success btn-sm">Logout</button>
+        </div>
+        <div class="content px-4">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" Wrap="FlexWrap.Wrap">
+                <RadzenTextBox Placeholder="Track, Artist, Album ... " @bind-Value=@search class="w-100" Style="max-width: 35%;" />
+                <RadzenButton Icon="search" Click=@(args => getSearchQuery()) ButtonStyle="ButtonStyle.Success" Style="color: #1db954;" Variant="Variant.Outlined" />
+                <div style="position: relative;">
+                    <button class="btn btn-primary" data-toggle="collapse" @onclick="ToggleFilterMenu" aria-expanded="false" aria-controls="collapseExample" style="position: relative">
+                        Filters
+                    </button>
+            
+                    <div class="@FilterCSS" style="position: absolute; z-index: 30; height: fit-content; width: 400px" id="collapseExample">
+                        <div class="card card-block" style="padding: 10px;">
+                            <RadzenStack Orientation="Orientation.Vertical" Gap="10px" Style="overflow-y: auto; max-height: 200px;">
+                                <button class="btn btn-link">Reset</button>
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="5px">
+                                    Options...
+                                    <RadzenCheckBoxList @bind-Value=@checkBoxes TValue="int" Orientation=Orientation.Horizontal class="mb-5">
+                                        <Items>
+                                            <RadzenCheckBoxListItem Text="Track" Value="1" />
+                                            <RadzenCheckBoxListItem Text="Artist" Value="2" />
+                                            <RadzenCheckBoxListItem Text="Album" Value="3" />
+                                        </Items>
+                                    </RadzenCheckBoxList>
+                                </RadzenStack>
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="4px">
+                                    Date and Time
+                                    <RadzenStack Orientation="Orientation.Horizontal" Gap="4px">
+                                        <RadzenDatePicker @bind-Value=@startDate DateFormat="MM/dd/yyyy" Style="min-width: 40%; max-width: 50%;" />
+                                        To
+                                        <RadzenDatePicker @bind-Value=@endDate DateFormat="MM/dd/yyyy" Style="min-width: 40%; max-width=50%;" />
+                                    </RadzenStack>
+                                </RadzenStack>
+                                <RadzenStack Orientation="Orientation.Vertical" Gap="4px">
+                                    Length
+                                
+                                </RadzenStack>
+                            </RadzenStack>
+                        </div>
+                    </div>
+                </div>
+                    
 
-    <button class="btn btn-primary" @onclick="@UpdateHistory">Update</button>
-    <p style="color: white;">@search</p>
-    <p style="color: white;">@results</p>
-</body>
+                <RadzenDropDown TValue="string" Value=@currentOrder Data=@order Change="@(args => currentOrder = $"{args}")" />
+
+                <button @onclick="ApplyFilters">Apply</button>
+            </RadzenStack>
+
+            <div style="margin-top: 15px; position: relative;">
+                <RadzenDataGrid @ref="songsGrid" TItem="Song" AllowSorting="true" AllowVirtualization="true" Data="@listOfSongs" Style="height: 700px; overflow: auto;">
+                    <EmptyTemplate>
+                        <p style="color: lightgrey; font-size: 24px; text-align: center; margin: 2rem;">No songs to display.</p>
+                    </EmptyTemplate>
+                    <Columns>
+                        <RadzenDataGridColumn Width="50px" TItem="Song" Title="No." Sortable="false" TextAlign="TextAlign.Center">
+                            <Template Context="data">
+                                @(listOfSongs.IndexOf(data) + 1)
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="Song" Title="Track" Property="track" Sortable="false" />
+                        <RadzenDataGridColumn TItem="Song" Title="Artists" Property="artists" Sortable="false">
+                            <Template Context="song">
+                                @artistToString(song)
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="Song" Title="Album" Property="album" Sortable="false" />
+                        <RadzenDataGridColumn TItem="Song" Title="Date" Property="played_at">
+                            <Template Context="song">
+                                @convertToDate(song.played_at)
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="Song" Title="Length" Property="length">
+                            <Template Context="song">
+                                @convertToTime(song.length)
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </div>
+        </div>
+    </main>
+</div>
 
 @code {
-    string? search;
+    string? search = "";
     string results = "";
-    IEnumerable<int> ranger = new int[] { 30, 78 };
-    DateTime? date;
     string username = "";
     string? authCode = "";
     string? access = "";
@@ -83,11 +113,20 @@
     string? history = "";
     string e = "";
 
-    Filter filter = new Filter();
+    Filter filter = new Filter(); //All filters
+    IEnumerable<int> checkBoxes = new int[] { 1, 2, 3 };
+    IEnumerable<string> order = new string[] { "Oldest", "Latest", "Longest", "Shortest" };
+    string currentOrder = "Oldest";
+    List<int> ranger = new List<int>(new int[] { 0, 600 });
+    DateTime startDate = DateTime.UnixEpoch;
+    DateTime endDate = DateTime.Now;
 
     List<Song> listOfSongs;
+    RadzenDataGrid<Song> songsGrid;
     History songHistory = new History();
     Searching searching = new Searching();
+    bool filterCollapse = true;
+    private string? FilterCSS => filterCollapse ? "collapse" : null;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -150,20 +189,17 @@
     public void UpdateHistory()
     {
         search = results;
-        // history = songHistory.GetSongHistory();
+        //history = songHistory.GetSongHistory();
     }
 
     private void getSearchQuery()
     {
-        Console.WriteLine("called");
-        //results = searching.Search(search, songHistory.getUsername());
-        listOfSongs = searching.Search(search, songHistory.getUsername());
-        Console.WriteLine("after");
+        listOfSongs = searching.Search(search, songHistory.getUsername(), filter, currentOrder);
     }
 
     private string convertToTime(int time)
     {
-        return "" + time / 60 + "m " + time % 60 + "s"; 
+        return "" + time / 60 + ":" + time % 60;
     }
 
     private string convertToDate(double date)
@@ -171,6 +207,64 @@
         TimeSpan timeSpan = TimeSpan.FromMilliseconds(date);
         DateTime dateTime = new DateTime(1970, 1, 1) + timeSpan;
         return dateTime.ToLocalTime().ToShortDateString() + " " + dateTime.ToLocalTime().ToShortTimeString();
+    }
+
+    private void ApplyFilters()
+    {
+        filter.Track = checkBoxes.Contains<int>(1);
+        filter.Artists = checkBoxes.Contains<int>(2);
+        filter.Album = checkBoxes.Contains<int>(3);
+        if (startDate != default(DateTime))
+        {
+            filter.DateAndTime = (startDate, filter.DateAndTime.end);
+        }
+        if (endDate != default(DateTime))
+        {
+            filter.DateAndTime = (filter.DateAndTime.start, endDate.AddHours(23));
+        }
+        filter.Length = (ranger[0], ranger[1]);
+        getSearchQuery();
+    }
+
+    private void ClearFilters()
+    {
+        filter.Track = true;
+        filter.Artists = true;
+        filter.Album = true;
+        checkBoxes = new int[] { 1, 2, 3 };
+        filter.DateAndTime = (DateTime.UnixEpoch, DateTime.Now);
+        startDate = DateTime.UnixEpoch;
+        endDate = DateTime.Now;
+        filter.Length = (0, 600);
+        ranger[0] = 0;
+        ranger[1] = 600;
+        currentOrder = "Oldest";
+        getSearchQuery();
+    }
+
+    private void Logout()
+    {
+        BrowserStorage.DeleteAsync("accessToken");
+        BrowserStorage.DeleteAsync("Auth");
+        BrowserStorage.DeleteAsync("refreshToken");
+        BrowserStorage.DeleteAsync("DateTime");
+        BrowserStorage.DeleteAsync("AuthCode");
+        NavManager.NavigateTo("/", true);
+    }
+
+    private string artistToString(Song song)
+    {
+        string result = "";
+        foreach (string artist in song.artists)
+        {
+            result += artist + ", ";
+        }
+        return result.Substring(0, result.Length - 2);
+    }
+
+    private void ToggleFilterMenu()
+    {
+        filterCollapse = !filterCollapse;
     }
 }
 

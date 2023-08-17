@@ -49,15 +49,6 @@ namespace SpotifyHistory.Data {
             var count = recentlyPlayed?.items?.Count != null ? recentlyPlayed.items.Count : 0;
             string ids = "";
 
-            BsonSerializer.RegisterSerializer(
-                typeof(decimal),
-                new DecimalSerializer(BsonType.Double,
-                new RepresentationConverter(
-                    true, // allow overflow, return decimal.MinValue or decimal.MaxValue instead
-                    true //allow truncation
-                ))
-            );
-
             for (int i = count - 1; i >= 0; i--) {
                 h += recentlyPlayed?.items?[i].track?.name + " - " + recentlyPlayed?.items?[i].track?.artists?.First<Artist>().name + recentlyPlayed?.items?[i].played_at + recentlyPlayed?.items?[i].track?.album?.genres + "\n";
                 //Console.WriteLine(recentlyPlayed?.items?[i].track?.name);
