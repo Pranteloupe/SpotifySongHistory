@@ -13,13 +13,11 @@ namespace SpotifyHistory.Data {
     public class History {
         private string apiLink = "https://api.spotify.com/v1/me";
         private HttpClient httpClient = new HttpClient();
-        private string? h;
-        private string connectionString = @"mongodb://songhistories:fGCgwjDtJB0laQWliG3OOVfX1sMEBRgcxXuOiVg5njHmQ0WGJ45FMNVsigC6O6Wsscvr1CuC7wdsACDbiJz77w==@songhistories.mongo.cosmos.azure.com:10255/?ssl=true&retrywrites=false&replicaSet=globaldb&maxIdleTimeMS=120000&appName=@songhistories@";
+        private string connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
         private MongoClientSettings settings;
         private MongoClient mongoClient;
         private string username = "";
         private string displayName = "";
-        private string result = "";
 
         public History() {
             settings = MongoClientSettings.FromUrl(new MongoUrl(connectionString));
@@ -27,11 +25,7 @@ namespace SpotifyHistory.Data {
             mongoClient = new MongoClient(settings);
         }
 
-        //runs automatically when songhistory.razor is opened
         public async Task GetHistoryAsync(string access, string refresh) {
-            h = "";
-
-            //await setUsername(access);
 
             if (httpClient.DefaultRequestHeaders.Contains("Authorization")) {
                 httpClient.DefaultRequestHeaders.Remove("Authorization");
@@ -43,6 +37,20 @@ namespace SpotifyHistory.Data {
             apiLink += "/player/recently-played?limit=50";
             var request = new HttpRequestMessage(HttpMethod.Get, apiLink);
             var response = await httpClient.SendAsync(request);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized) {
+                await SpotifyAuth.SpotifyRefreshAsync(refresh);
+                access = SpotifyAuth.getAccessToken();
+
+                httpClient.DefaultRequestHeaders.Remove("Authorization");
+                httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + access);
+                response = await httpClient.SendAsync(request);
+            } else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden) {
+                //do something
+            } else if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests) {
+                //do something else
+            }
+
             var jsonResponse = await response.Content.ReadAsStringAsync();
             RecentlyPlayed? recentlyPlayed = JsonConvert.DeserializeObject<RecentlyPlayed>(jsonResponse);
 
@@ -50,8 +58,6 @@ namespace SpotifyHistory.Data {
             string ids = "";
 
             for (int i = count - 1; i >= 0; i--) {
-                h += recentlyPlayed?.items?[i].track?.name + " - " + recentlyPlayed?.items?[i].track?.artists?.First<Artist>().name + recentlyPlayed?.items?[i].played_at + recentlyPlayed?.items?[i].track?.album?.genres + "\n";
-                //Console.WriteLine(recentlyPlayed?.items?[i].track?.name);
                 songs.Add(SongToDocument(recentlyPlayed?.items?[i]));
                 ids += recentlyPlayed?.items?[i].track?.id + ",";
             }
@@ -60,6 +66,22 @@ namespace SpotifyHistory.Data {
             audioLink += "?ids=" + ids.Substring(0, ids.Length - 1);
             var audioRequest = new HttpRequestMessage(HttpMethod.Get, audioLink);
             var audioResponse = await httpClient.SendAsync(audioRequest);
+
+            if (audioResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized) {
+                await SpotifyAuth.SpotifyRefreshAsync(refresh);
+                access = SpotifyAuth.getAccessToken();
+                 
+                httpClient.DefaultRequestHeaders.Remove("Authorization");
+                httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + access);
+                audioResponse = await httpClient.SendAsync(audioRequest);
+            }
+            else if (audioResponse.StatusCode == System.Net.HttpStatusCode.Forbidden) {
+                //do something
+            }
+            else if (audioResponse.StatusCode == System.Net.HttpStatusCode.TooManyRequests) {
+                //do something else
+            }
+
             var audioJson = await audioResponse.Content.ReadAsStringAsync();
             AudioFeatures? audioFeatures = JsonConvert.DeserializeObject<AudioFeatures>(audioJson);
 
@@ -138,7 +160,6 @@ namespace SpotifyHistory.Data {
             displayName = user?.display_name != null ? user.display_name : "";
         }
 
-        //Creates a song element from track info
         private Song SongToDocument(PlayHistory? playHistory) {
             Song song = new Song();
             song.track = playHistory?.track?.name;
@@ -170,18 +191,8 @@ namespace SpotifyHistory.Data {
             return song;
         }
 
-        //if a document with username does not exist in db
-        private Document createNewDocument() {
-            Document document = new Document();
-            return document;
-        }
-
         public string getDisplayName() {
             return displayName;
-        }
-
-        public string? GetSongHistory() {
-            return h;
         }
 
         public string getUsername() {

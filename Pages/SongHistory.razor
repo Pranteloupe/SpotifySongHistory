@@ -26,45 +26,43 @@
                 <RadzenTextBox Placeholder="Track, Artist, Album ... " @bind-Value=@search class="w-100" Style="max-width: 35%;" />
                 <RadzenButton Icon="search" Click=@(args => getSearchQuery()) ButtonStyle="ButtonStyle.Success" Style="color: #1db954;" Variant="Variant.Outlined" />
                 <div style="position: relative;">
-                    <button class="btn btn-primary" data-toggle="collapse" @onclick="ToggleFilterMenu" aria-expanded="false" aria-controls="collapseExample" style="position: relative">
+                    <button class="btn btn-primary" data-toggle="collapse" @onclick="ToggleFilterMenu" aria-expanded="false" aria-controls="collapseExample" style="position: relative; background-color: #1db954 !important; border-color: #ffffff !important;">
                         Filters
                     </button>
-            
+
                     <div class="@FilterCSS" style="position: absolute; z-index: 30; height: fit-content; width: 400px" id="collapseExample">
                         <div class="card card-block" style="padding: 10px;">
                             <RadzenStack Orientation="Orientation.Vertical" Gap="10px" Style="overflow-y: auto; max-height: 200px;">
                                 <button class="btn btn-link">Reset</button>
-                                <RadzenStack Orientation="Orientation.Vertical" Gap="5px">
                                     Options...
-                                    <RadzenCheckBoxList @bind-Value=@checkBoxes TValue="int" Orientation=Orientation.Horizontal class="mb-5">
+                                    <RadzenCheckBoxList @bind-Value=@checkBoxes TValue="int" Orientation=Orientation.Horizontal Gap="10px" class="mb-5">
                                         <Items>
-                                            <RadzenCheckBoxListItem Text="Track" Value="1" />
-                                            <RadzenCheckBoxListItem Text="Artist" Value="2" />
-                                            <RadzenCheckBoxListItem Text="Album" Value="3" />
+                                            <RadzenCheckBoxListItem Text="Track" Value="1" Style="padding: 5px"/>
+                                            <RadzenCheckBoxListItem Text="Artist" Value="2" Style="padding: 5px"/>
+                                            <RadzenCheckBoxListItem Text="Album" Value="3" Style="padding: 5px"/>
                                         </Items>
                                     </RadzenCheckBoxList>
-                                </RadzenStack>
-                                <RadzenStack Orientation="Orientation.Vertical" Gap="4px">
                                     Date and Time
                                     <RadzenStack Orientation="Orientation.Horizontal" Gap="4px">
                                         <RadzenDatePicker @bind-Value=@startDate DateFormat="MM/dd/yyyy" Style="min-width: 40%; max-width: 50%;" />
-                                        To
+                                        _
                                         <RadzenDatePicker @bind-Value=@endDate DateFormat="MM/dd/yyyy" Style="min-width: 40%; max-width=50%;" />
                                     </RadzenStack>
-                                </RadzenStack>
-                                <RadzenStack Orientation="Orientation.Vertical" Gap="4px">
+                               @* <RadzenStack Orientation="Orientation.Vertical" Gap="4px">
                                     Length
-                                
-                                </RadzenStack>
+
+                                </RadzenStack> *@
                             </RadzenStack>
                         </div>
                     </div>
                 </div>
-                    
+
 
                 <RadzenDropDown TValue="string" Value=@currentOrder Data=@order Change="@(args => currentOrder = $"{args}")" />
 
-                <button @onclick="ApplyFilters">Apply</button>
+                <button class="btn btn-success" style="background-color: #1db954 !important; position: relative; border-color: #ffffff !important;" data-toggle="collapse" @onclick="ApplyFilters" aria-expanded="false" aria-controls="collapseExample">
+                    Apply
+                </button>
             </RadzenStack>
 
             <div style="margin-top: 15px; position: relative;">
@@ -104,14 +102,11 @@
 
 @code {
     string? search = "";
-    string results = "";
     string username = "";
     string? authCode = "";
     string? access = "";
     string? refresh = "";
     string? Auth = "false";
-    string? history = "";
-    string e = "";
 
     Filter filter = new Filter(); //All filters
     IEnumerable<int> checkBoxes = new int[] { 1, 2, 3 };
@@ -147,7 +142,6 @@
                 }
                 SpotifyAuth.getTokens(authCode);
                 await BrowserStorage.SetAsync("AuthCode", authCode);
-                e = SpotifyAuth.getError();
                 await Authenticated();
                 await SetToken();
                 await Task.Delay(1200);
@@ -184,12 +178,6 @@
     {
         var a = await BrowserStorage.GetAsync<string>("Auth");
         Auth = a.Value;
-    }
-
-    public void UpdateHistory()
-    {
-        search = results;
-        //history = songHistory.GetSongHistory();
     }
 
     private void getSearchQuery()

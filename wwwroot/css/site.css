@@ -146,6 +146,10 @@ body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
+RadzenTextBox:hover {
+    border-color: #1db954;
+}
+
 .mt-100 {
     margin-top: 150px;
 }

@@ -9,10 +9,9 @@ namespace SpotifyHistory.Data
 {
 	public class Searching
 	{
-        private string connectionString = @"mongodb://songhistories:fGCgwjDtJB0laQWliG3OOVfX1sMEBRgcxXuOiVg5njHmQ0WGJ45FMNVsigC6O6Wsscvr1CuC7wdsACDbiJz77w==@songhistories.mongo.cosmos.azure.com:10255/?ssl=true&retrywrites=false&replicaSet=globaldb&maxIdleTimeMS=120000&appName=@songhistories@";
+        private string connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
         private MongoClientSettings settings;
         private MongoClient mongoClient;
-        private string result = "";
 
 		public Searching() {
             settings = MongoClientSettings.FromUrl(new MongoUrl(connectionString));
@@ -21,13 +20,11 @@ namespace SpotifyHistory.Data
         }
 
         public List<Song> Search(string query, string username, Filter filter, string order) {
-            result = "Howdy!";
             query = query.ToLower();
-            Console.WriteLine("PPP");
 
             var findDocument = mongoClient.GetDatabase("SpotifySongHistory").GetCollection<Document>("SpotifySongs").Find(a => a.username == username).SingleOrDefault() != null
                 ? mongoClient.GetDatabase("SpotifySongHistory").GetCollection<Document>("SpotifySongs").Find(a => a.username == username).ToList() : null;
-            Console.WriteLine("XXX");
+
             List<Song> songs = new List<Song>();
 
             if (findDocument != null) {
